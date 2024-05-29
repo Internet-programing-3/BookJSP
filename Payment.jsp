@@ -94,7 +94,7 @@
             <a href="MyPage.jsp">
                 <img src="images/mypage.png" style="width: 50px; height: 50px;" title="마이페이지" alt="마이페이지">
             </a>
-            <a href="inCart.jsp">
+            <a href="showCart.jsp">
                 <img src="images/cart.png" style="width: 50px; height: 50px; margin: 0 10px;" title="장바구니" alt="장바구니">
             </a>
             <a href="Logout.jsp">

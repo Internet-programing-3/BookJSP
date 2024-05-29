@@ -21,13 +21,16 @@ try {
     Class.forName("com.mysql.cj.jdbc.Driver");
     con = DriverManager.getConnection(DB_URL, DB_ID, DB_PASSWORD);
 
-    String ctNo = session.getId(); // 세션번호 장바구니번호를 가져옴
-    String caseNo = request.getParameter("case");
+    String userId = (String)session.getAttribute("userId"); // 사용자의 ID를 가져옴
 
-    String jsql = "delete from cart where ctNo=?";
-    PreparedStatement pstmt = con.prepareStatement(jsql);
-    pstmt.setString(1, ctNo);
-    pstmt.executeUpdate();
+    // 주문 정보 가져오기
+    String ordNo = request.getParameter("ordNo");
+
+    String sql = "SELECT ordReceiver, ordRcvAddress, ordRcvPhone FROM orderInfo WHERE ordNo = ?";
+    PreparedStatement pstmt1 = con.prepareStatement(sql);
+    pstmt1.setString(1, ordNo);
+    ResultSet rs1 = pstmt1.executeQuery();
+
 %>
 
 <header>
@@ -119,15 +122,6 @@ try {
  <!-- 주문자 정보 -->
     <section class="orderInfo">
         <%
-            String ordNoString = request.getParameter("ordNo");
-            int ordNo = (ordNoString != null && !ordNoString.isEmpty()) ? Integer.parseInt(ordNoString) : 0;
-
-            String sql = "SELECT ordReceiver, ordRcvAddress, ordRcvPhone FROM orderInfo WHERE ordNo = ?";
-            PreparedStatement pstmt1 = con.prepareStatement(sql);
-            pstmt1.setInt(1, ordNo);
-
-            ResultSet rs1 = pstmt1.executeQuery();
-
             if (rs1.next()) {
                 String ordReceiver = rs1.getString("ordReceiver");
                 String ordRcvAddress = rs1.getString("ordRcvAddress");
@@ -166,9 +160,9 @@ try {
     <!-- 주문 상품 목록 -->
     <section class="orderProducts">
         <%
-            String jsql2 = "SELECT bookId, ctQty FROM cart WHERE ctNo = ?";
+            String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ?";
             PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-            pstmt2.setString(1, ctNo);
+            pstmt2.setString(1, userId);
             ResultSet rs2 = pstmt2.executeQuery();
             int total = 0;
             while (rs2.next()) {
@@ -217,7 +211,6 @@ try {
     </section>
 </main>
 
-
 <!-- 페이지 이동 -->
 <div class="pageMove">
     <p><a href="MyPage.jsp">&lt; 메인으로 돌아가기</a></p>
@@ -247,9 +240,13 @@ try {
         </div>
     </div>
 </footer>
-</body>
-</html>
 <%
+    // 장바구니 항목 삭제
+    String deleteCartSql = "DELETE FROM cart WHERE userId = ?";
+    PreparedStatement pstmtDelete = con.prepareStatement(deleteCartSql);
+    pstmtDelete.setString(1, userId);
+    pstmtDelete.executeUpdate();
+    pstmtDelete.close();
 
 } catch (Exception e) {
     out.println("일반 오류: " + e.getMessage());
@@ -263,3 +260,5 @@ try {
     }
 }
 %>
+</body>
+</html>

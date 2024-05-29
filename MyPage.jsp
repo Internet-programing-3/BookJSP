@@ -23,16 +23,17 @@
 		String DB_PASSWORD = "abcd";
 		Class.forName("com.mysql.cj.jdbc.Driver"); 
 		Connection con = DriverManager.getConnection(DB_URL, DB_ID, DB_PASSWORD);
+		String userId = (String) session.getAttribute("userId");
 	%>
 	<!-- 제이쿼리용 -->
 	<script type="text/javascript">
-		 $(document).ready(function(){
-			 $(".btnMM li").click(function () {
-				var contNum = $(this).index();
-				$(this).addClass("On").siblings().removeClass("On");
-				$(".contMM").eq(contNum).addClass("On").siblings().removeClass("On");
-			});
-		 })
+	    $(document).ready(function(){
+	        $(".btnMM li").click(function () {
+	           var contNum = $(this).index();
+	           $(this).addClass("On").siblings().removeClass("On");
+	           $(".contMM").eq(contNum).addClass("On").siblings().removeClass("On");
+	       });
+	    })
 	</script>
 
 	<!-- header (로고) -->
@@ -91,7 +92,7 @@
 		<div>
 			<!-- 로그인 -->
 			<%
-				if (session.getAttribute("userId") == null) {
+				if (userId == null) {
 			%>
 				<script>
 						window.location.href = "<%= request.getContextPath() %>/Login.jsp";
@@ -141,41 +142,65 @@
 				<li class="On"><a href="javascript:void(0);">주문 내역 조회</a></li>
 				</ul>
 				<%
-     int ordNo = 0;
 
-    String mypagebookinfo = "SELECT ordNo, ordDate, ordReceiver FROM orderInfo WHERE ordNo =?";
+    String mypagebookinfo = "SELECT ordNo, ordDate, ordReceiver, ordRcvAddress FROM orderInfo WHERE userId = ?";
     PreparedStatement pstmt1 = con.prepareStatement(mypagebookinfo);
-    pstmt1.setInt(1, ordNo);
+    pstmt1.setString(1, userId);
     ResultSet rs1 = pstmt1.executeQuery();
-
-    if (rs1.next()) {
-        // 이미 선언된 변수 ordNo 사용
-        ordNo = rs1.getInt("ordNo");
-        String ordDate = rs1.getString("ordDate");
-        String ordReceiver = rs1.getString("ordReceiver");
-
+    
         // 주문 상품 정보 가져오는 쿼리 추가 필요
 %>
 <div class="contMM On">
     <h1>전체 주문 내역</h1>
-    <table class="tableMM-01">
-        <tr>
-            <th>주문일</th>
-            <th>주문 번호</th>
-            <th>수령인</th>
-            <th>주문 상품</th>
-        </tr>
-        <tr>
-            <td><%= ordDate %></td>
-            <td><%= ordNo %></td>
-            <td><%= ordReceiver %></td>
-            <td>주문 상품 정보</td>
-        </tr>
-    </table>
+               <table class="tableMM-01">
+                <tr>
+                    <th>주문일</th>
+                    <th>주문 번호</th>
+                    <th>수령인</th>
+                    <th>주문 주소</th>
+                    <th>주문 상품</th>
+                </tr>
+                <%
+                    while (rs1.next()) {
+                        int ordNo = rs1.getInt("ordNo");
+                        String ordDate = rs1.getString("ordDate");
+                        String ordReceiver = rs1.getString("ordReceiver");
+                        String ordRcvAddress = rs1.getString("ordRcvAddress");
+                        // 주문 상품 정보 가져오기
+                        String orderDetailsQuery = "SELECT p.bookId, b.bookName, p.ordQty " +
+                                                   "FROM orderproduct p " +
+                                                   "JOIN Book b ON p.bookId = b.bookId " +
+                                                   "WHERE p.ordNo = ?";
+                        PreparedStatement pstmtDetails = con.prepareStatement(orderDetailsQuery);
+                        pstmtDetails.setInt(1, ordNo);
+                        ResultSet rsDetails = pstmtDetails.executeQuery();
+                %>
+                <tr>
+                    <td><%= ordDate %></td>
+                    <td><%= ordNo %></td>
+                    <td><%= ordReceiver %></td>
+                    <td><%= ordRcvAddress %></td>
+                    <td>
+                        <%
+                            while (rsDetails.next()) {
+                                String bookName = rsDetails.getString("bookName");
+                                int quantity = rsDetails.getInt("ordQty");
+                        %>
+                        <p><%= bookName %> - <%= quantity %> 개</p>
+                        <%
+                            }
+                            rsDetails.close();
+                            pstmtDetails.close();
+                        %>
+                    </td>
+                </tr>
+                <%
+                    }
+                    rs1.close();
+                    pstmt1.close();
+                %>
+            </table>
 </div>
-<%
-    }
-%>
 
 
 		<ul class="btnMM">

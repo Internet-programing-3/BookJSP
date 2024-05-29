@@ -137,6 +137,28 @@ LOCK TABLES `cartitem` WRITE;
 /*!40000 ALTER TABLE `cartitem` ENABLE KEYS */;
 UNLOCK TABLES;
 
+DROP TABLE IF EXISTS `orderInfo`;
+CREATE TABLE orderInfo (
+    ordNo INT AUTO_INCREMENT PRIMARY KEY,
+    userId INT NOT NULL,
+    ordDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ordReceiver VARCHAR(20) NOT NULL,
+    ordRcvAddress VARCHAR(255) NOT NULL,
+    ordRcvPhone VARCHAR(20) NOT NULL,
+    ordPay VARCHAR(20) NOT NULL,
+    FOREIGN KEY (userId) REFERENCES user(userId)
+);
+
+DROP TABLE IF EXISTS `orderProduct`;
+CREATE TABLE orderProduct (
+    ordNo INT,
+    bookId INT,
+    ordQty INT NOT NULL,
+    PRIMARY KEY (ordNo, bookId),
+    FOREIGN KEY (ordNo) REFERENCES orderInfo(ordNo),
+    FOREIGN KEY (bookId) REFERENCES Book(bookId)
+);
+
 --
 -- Table structure for table `club`
 --
