@@ -38,7 +38,6 @@
         <div class="todayMain"><a href="#">
             <%
             String userId = (String)session.getAttribute("userId");
-            String ctNo=session.getId();
             int today = 0;
             Random random = new Random();
             today = random.nextInt(8) + 1;
@@ -168,9 +167,9 @@
             <article class="shopList">
                 <%
                 // 주문 상품 정보 출력
-                String jsql2 = "SELECT bookId, ctQty FROM cart WHERE ctNo = ?";
+                String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ?";
                 PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-                pstmt2.setString(1, ctNo);
+                pstmt2.setString(1, userId);
                 ResultSet rs2 = pstmt2.executeQuery();
                 int total = 0;
                 while (rs2.next()) {

@@ -186,10 +186,16 @@
 				</table>
 			</div>
 			<div class="addDO">
-				<p>주문수량 : <input type="number" name="#" value="1"> 권</p>
+				<p>주문수량 : <input type="number" id="ctQty" value="1" min="1" max="<%=bookStock%>"> 권</p>
 				<%if(bookStock <= 10){ out.print("<p class='stock'>(남은 재고: " + bookStock + "권)</p>"); }%>
-				<a href="inCart.jsp"><button class="cart">장바구니 담기</button></a>
+				<a href="javascript:addToCart('<%=bookId%>');"><button class="cart">장바구니 담기</button></a>
 			</div>
+			<script type="text/javascript">
+    function addToCart(bookId) {
+        var ctQty = document.getElementById('ctQty').value;
+        window.location.href = 'inCart.jsp?bookId=' + bookId + '&ctQty=' + ctQty;
+    }
+</script>
 		</section>
 		<section class="DetailTwo">
 			<!-- 도서 상세 정보 -->

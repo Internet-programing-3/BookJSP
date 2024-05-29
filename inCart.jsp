@@ -31,63 +31,61 @@
             String DB_ID="multi"; 
             String DB_PASSWORD="abcd";
 
-    		Class.forName("com.mysql.cj.jdbc.Driver"); 
+            Class.forName("com.mysql.cj.jdbc.Driver"); 
             Connection con = DriverManager.getConnection(DB_URL, DB_ID, DB_PASSWORD); 
             
-            String ctNo=session.getId();
-            
             String bookId = request.getParameter("bookId"); // 상품번호
-            int ctQty = Integer.parseInt(request.getParameter("ctQty")); // ( 주문수량 장바구니에 담
+            int ctQty = Integer.parseInt(request.getParameter("ctQty")); // 주문수량 장바구니에 담을 수량
 
-            String jsql = "select * from cart where ctNo = ? and bookId = ?";
-            PreparedStatement pstmt = con.prepareStatement(jsql);
-            pstmt.setString(1, ctNo);
-            pstmt.setString(2, bookId);
-            ResultSet rs = pstmt.executeQuery(); 
-             if(rs.next()) // . 동일 상품이 이미 장바구니에 존재한다면 수량만을 추가시킴
-            { // , update 즉 문을 사용하여 이미 존재하는 상품데이터의 수량부분만을 갱신시
-            
-            int sum = rs.getInt("ctQty") + ctQty; // 이미 기존에 있는 수량에다 새로 추가시킬 수량을
-            
-            String jsql2 = "update cart set ctQty=? where ctNo=? and bookId=?";
-            PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-            pstmt2.setInt(1, sum);
-            pstmt2.setString(2, ctNo);
-            pstmt2.setString(3, bookId);
-            pstmt2.executeUpdate();
-            %>
-            <script>
-                console.log("Update Query Executed. ctNo: <%=ctNo%>, bookId: <%=bookId%>, ctQty: <%=ctQty%>");
-            </script>
-            <%
+            // 기존에 장바구니에 있는 상품인지 확인
+            String checkExistingQuery = "SELECT * FROM cart WHERE userId = ? AND bookId = ?";
+            PreparedStatement checkExistingStmt = con.prepareStatement(checkExistingQuery);
+            checkExistingStmt.setString(1, userId);
+            checkExistingStmt.setString(2, bookId);
+            ResultSet existingRs = checkExistingStmt.executeQuery();
+
+            if (existingRs.next()) {
+                // 이미 장바구니에 있는 상품이면 수량을 업데이트
+                int existingQty = existingRs.getInt("ctQty");
+                int updatedQty = existingQty + ctQty;
+
+                String updateQuery = "UPDATE cart SET ctQty = ? WHERE userId = ? AND bookId = ?";
+                PreparedStatement updateStmt = con.prepareStatement(updateQuery);
+                updateStmt.setInt(1, updatedQty);
+                updateStmt.setString(2, userId);
+                updateStmt.setString(3, bookId);
+                updateStmt.executeUpdate();
+            } else {
+                // 장바구니에 없는 상품이면 새로운 레코드 추가
+                String getMaxCtNoQuery = "SELECT MAX(ctNo) AS maxCtNo FROM cart";
+                PreparedStatement getMaxCtNoStmt = con.prepareStatement(getMaxCtNoQuery);
+                ResultSet maxCtNoRs = getMaxCtNoStmt.executeQuery(); 
+                int newCtNo = 1; // 기본값은 1
+                if(maxCtNoRs.next()) {
+                    newCtNo = maxCtNoRs.getInt("maxCtNo") + 1; // 최대 ctNo에 1을 더하여 새로운 ctNo 생성
+                }
+
+                // 새로운 레코드를 추가할 때 ctNo도 함께 추가
+                String insertQuery = "INSERT INTO cart (ctNo, userId, bookId, ctQty) VALUES (?, ?, ?, ?)";
+                PreparedStatement insertStmt = con.prepareStatement(insertQuery);
+                insertStmt.setInt(1, newCtNo);
+                insertStmt.setString(2, userId);
+                insertStmt.setString(3, bookId);
+                insertStmt.setInt(4, ctQty);
+                insertStmt.executeUpdate();
             }
-            else // , 동일 상품이 장바구니에 존재하지 않는다면 새로운 상품레코드를 장바구니 테이블에
+
+            con.close();
+            // 장바구니 내역을 보여주는 페이지로 이동
+            response.sendRedirect("showCart.jsp");
             
-            {
-            String jsql3 = "insert into cart (ctNo, bookId, ctQty) values (?,?,?)";
-            PreparedStatement pstmt3 = con.prepareStatement(jsql3);
-            pstmt3.setString(1,ctNo);
-            pstmt3.setString(2,bookId);
-            pstmt3.setInt(3,ctQty);
-            pstmt3.executeUpdate();
-            %>
-            <script>
-                console.log("Insert Query Executed. ctNo: <%=ctNo%>, bookId: <%=bookId%>, ctQty: <%=ctQty%>");
-            </script>
-            <%
-            } // 76 ~97 if-else 행 행 문의 끝
         } catch(Exception e) {
-            %>
-            <script>
-                console.log("<%=e%>");
-            </script>
-            
-            
-            <%
-        } // catch 문 닫기
-        // , showCart.jsp 장바구니에 상품을 등록 또는 갱신시킨 후 장바구니 내역을 보여주도록 를 호
-        response.sendRedirect("showCart.jsp"); // <jsp:forward page="showCart.jsp"/> 와
-    } // 24~104 if-else 행 문의 끝 
+            // 오류 발생 시 콘솔에 오류 메시지 출력
+            e.printStackTrace();
+            // 필요에 따라 사용자에게 오류 메시지 전달
+            // response.sendRedirect("error.jsp");
+        }
+    }
 %>
 </body>
 </html>
