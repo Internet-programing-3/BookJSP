@@ -183,19 +183,14 @@ pstmt2.close();
         </tr>
     </table>
     <!-- 구매 버튼 -->
-    <a href="Payment.jsp">
+    <a id="purchaseButton">
         <button>구매하기</button>
     </a>
 </aside>
-
-								
-			
 							<%
 							}
 							%>
 					
-					
-				
 		<%
 			
 		} catch (Exception e) {
@@ -255,19 +250,23 @@ $(document).ready(function() {
 
     // 구매하기 버튼 클릭 시 선택된 항목들만 결제 페이지로 전송
     $("#purchaseButton").on("click", function() {
-        let selectedItems = [];
-        $(".item-checkbox:checked").each(function() {
-            selectedItems.push($(this).data("bookid"));
-        });
-
-        if (selectedItems.length > 0) {
-            $.post("Payment.jsp", { items: selectedItems.join(",") }, function(response) {
-                window.location.href = "Payment.jsp";
-            });
-        } else {
-            alert("선택된 상품이 없습니다.");
-        }
+    let selectedItems = [];
+    $(".item-checkbox:checked").each(function() {
+        selectedItems.push($(this).val()); // ctNo 값을 가져와서 배열에 추가
     });
+
+    if (selectedItems.length > 0) {
+        // 선택된 ctNo 값을 배열로 가지고 있는 selectedItems를 문자열로 변환하여 쿼리 문자열에 추가
+        var queryString = selectedItems.map(function(ctNo) {
+            return 'ctNo=' + ctNo;
+        }).join('&');
+
+        // 결제 페이지로 이동하면서 쿼리 문자열을 추가하여 전달
+        window.location.href = "Payment.jsp?" + queryString;
+    } else {
+        alert("선택된 상품이 없습니다.");
+    }
+});
 
     // 초기 총액 계산
     calculateTotal();

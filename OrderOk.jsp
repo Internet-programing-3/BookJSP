@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html;charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="java.sql.*, java.text.*, java.util.*" %>
+<%@ page import="java.sql.*, java.text.*, java.util.*, java.net.*" %>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -19,6 +19,13 @@ try {
     String DB_PASSWORD = "abcd";
     Class.forName("com.mysql.cj.jdbc.Driver"); 
     con = DriverManager.getConnection(DB_URL, DB_ID, DB_PASSWORD);
+
+    // ctNos 값 디코딩
+    String[] ctNosEncoded = request.getParameterValues("ctNos"); // 인코딩된 값 받기
+    String[] ctNos = new String[ctNosEncoded.length]; // 디코딩된 값 저장할 배열 생성
+    for (int i = 0; i < ctNosEncoded.length; i++) {
+        ctNos[i] = URLDecoder.decode(ctNosEncoded[i], "UTF-8");
+    }
 
     String userId = (String)session.getAttribute("userId");
     // 주문정보 테이블에 저장
@@ -61,31 +68,55 @@ try {
     pstmt4.executeUpdate();
     pstmt4.close();
 
-    // 장바구니에서 주문 상품 가져오기
-    String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ?";
-    PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-    pstmt2.setString(1, userId);
-    ResultSet rs2 = pstmt2.executeQuery();
-
     // 주문상품 테이블에 데이터 삽입
-    while (rs2.next()) {
-        String bookId = rs2.getString("bookId");
-        int ctQty = rs2.getInt("ctQty");
-
-        String jsql3 = "INSERT INTO orderProduct (ordNo, bookId, ordQty) VALUES (?,?,?)";
-        PreparedStatement pstmt3 = con.prepareStatement(jsql3);
-        pstmt3.setInt(1, oNum);
-        pstmt3.setString(2, bookId);
-        pstmt3.setInt(3, ctQty);
-        pstmt3.executeUpdate();
-        pstmt3.close();
+    for (String ctNo : ctNos) { // 수정된 부분
+    // 쉼표로 구분된 문자열을 분할하여 각 숫자를 추출
+    String[] numbers = ctNo.split(",\\s*");
+		for (String number : numbers) { // 수정된 부분
+		    // ctNo를 정수로 파싱하여 사용
+		    int cartId = Integer.parseInt(number.replaceAll("\\[|\\]", ""));
+		    
+		    // cart 테이블에서 해당 ctNo에 해당하는 데이터 조회
+		    String jsql5 = "SELECT bookId, ctQty FROM cart WHERE ctNo = ?";
+		    PreparedStatement pstmt5 = con.prepareStatement(jsql5);
+		    pstmt5.setInt(1, cartId);
+		    ResultSet rs5 = pstmt5.executeQuery();
+		
+		    // 조회된 데이터를 사용하여 주문상품 테이블에 삽입
+		    if (rs5.next()) {
+		        int bookId = rs5.getInt("bookId");
+		        int ctQty = rs5.getInt("ctQty");
+		
+		        String jsql6 = "INSERT INTO orderProduct (ordNo, bookId, ordQty) VALUES (?, ?, ?)";
+		        PreparedStatement pstmt6 = con.prepareStatement(jsql6);
+		        pstmt6.setInt(1, oNum);
+		        pstmt6.setInt(2, bookId);
+		        pstmt6.setInt(3, ctQty);
+		        pstmt6.executeUpdate();
+		        pstmt6.close();
+		    }
+		    
+		    // 리소스 닫기
+		    rs5.close();
+		    pstmt5.close();
+		}
     }
 
-    rs2.close();
-    pstmt2.close();
 
-    // 주문 처리 후 장바구니 비우기
-    response.sendRedirect("DeleteAllCart.jsp?ordNo=" + oNum);
+ 	// 주문 처리 후 장바구니 비우기
+    // ctNos 배열을 URL 파라미터로 변환
+		StringBuilder urlBuilder = new StringBuilder("DeleteAllCart.jsp?ordNo=" + oNum);
+		for (String ctNo : ctNosEncoded) {
+		    String[] values = ctNo.split(","); // 쉼표로 각 요소 분할
+		    for (String value : values) {
+		        String trimmedValue = value.replaceAll("\\[|\\]", ""); // 대괄호 제거
+		        urlBuilder.append("&ctNos=").append(URLEncoder.encode(trimmedValue, "UTF-8"));
+		    }
+		}
+
+    // 최종 URL로 리디렉션
+    response.sendRedirect(urlBuilder.toString());
+
 
 } catch(Exception e) {
     out.println(e);

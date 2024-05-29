@@ -23,6 +23,8 @@
         String DB_PASSWORD = "abcd";
         Class.forName("com.mysql.cj.jdbc.Driver"); 
         Connection con = DriverManager.getConnection(DB_URL, DB_ID, DB_PASSWORD);
+        String userId = (String)session.getAttribute("userId");
+        String[] ctNos = request.getParameterValues("ctNo");
     %>
 
     <!-- header (로고) -->
@@ -37,7 +39,6 @@
         <!-- 오늘의 책 -->
         <div class="todayMain"><a href="#">
             <%
-            String userId = (String)session.getAttribute("userId");
             int today = 0;
             Random random = new Random();
             today = random.nextInt(8) + 1;
@@ -115,8 +116,6 @@
             <!-- 배송지 정보 -->
             <!-- 주문자 정보 출력 -->
             <%
-            
-                
                     String jsql4 = "SELECT name, phone FROM user WHERE userId = ?";
                     PreparedStatement pstmt4 = con.prepareStatement(jsql4);
                     pstmt4.setString(1, userId);
@@ -130,12 +129,9 @@
                         tel = rs4.getString("phone");
                     }
 					
-
-                    
-   
     
 %>
-        <form name="form" method="post" action="OrderOk.jsp">
+        <form name="form" method="post" action="OrderOk.jsp?ctNos=<%= java.net.URLEncoder.encode(Arrays.toString(ctNos), "UTF-8") %>">
 				<article class="shopList">
 						<table>
 							<tr class="cartCont">
@@ -149,7 +145,7 @@
 							</tr>
 
 							<tr class="cartCont">
-								<td>연락처</dh>
+								<td>연락처</td>
 								<td><input type="text" name="ordRcvPhone" ></td>
 							</tr>
 						</table>
@@ -159,51 +155,51 @@
             <%
                     
                     rs4.close();
-                    pstmt4.close();
-            
+                   
             %>
 
             <!-- 상품 목록 -->
             <article class="shopList">
                 <%
-                // 주문 상품 정보 출력
-                String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ?";
-                PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-                pstmt2.setString(1, userId);
-                ResultSet rs2 = pstmt2.executeQuery();
                 int total = 0;
-                while (rs2.next()) {
-                    String prdNo = rs2.getString("bookId");
-                    int ctQty = rs2.getInt("ctQty");
-                    String jsql3 = "SELECT bookName, price, bookImg FROM Book WHERE bookId = ?";
-                    PreparedStatement pstmt3 = con.prepareStatement(jsql3);
-                    pstmt3.setString(1, prdNo);
-                    ResultSet rs3 = pstmt3.executeQuery();
-                    rs3.next();
-
-                    String prdName = rs3.getString("bookName");
-                    int prdPrice = rs3.getInt("price");
-                    String bookImg = rs3.getString("bookImg");
-                    int amount = prdPrice * ctQty;
-                    total += amount;
-                %>
-                <table>
-                    <tr class="cartHeader">
-                        <th colspan="4">주문 상품 : <%=ctQty %> 개</th>
-                    </tr>
-                    <tr class="shopCont">
-                            <td><img src="<%= bookImg %>.jpg"></td>
-                            <td align="left"><%= prdName %></td>
-                            <td><%= ctQty %>권</td>
-                            <td><%= amount %>원</td>
-                        </a>
-                    </tr>
-                </table>
-                <%
-                }
-                rs2.close();
-                pstmt2.close();
-                %>
+				// 주문 상품 정보 출력
+				for (String ctNo : ctNos) {
+				    String jsql2 = "SELECT bookId, ctQty FROM cart WHERE ctNo = ?";
+				    PreparedStatement pstmt2 = con.prepareStatement(jsql2);
+				    pstmt2.setString(1, ctNo);
+				    ResultSet rs2 = pstmt2.executeQuery();
+				    while (rs2.next()) {
+				        String prdNo = rs2.getString("bookId");
+				        int ctQty = rs2.getInt("ctQty");
+				        String jsql3 = "SELECT bookName, price, bookImg FROM Book WHERE bookId = ?";
+				        PreparedStatement pstmt3 = con.prepareStatement(jsql3);
+				        pstmt3.setString(1, prdNo);
+				        ResultSet rs3 = pstmt3.executeQuery();
+				        rs3.next();
+				
+				        String prdName = rs3.getString("bookName");
+				        int prdPrice = rs3.getInt("price");
+				        String bookImg = rs3.getString("bookImg");
+				        int amount = prdPrice * ctQty;
+				        total += amount;
+				%>
+				<table>
+				    <tr class="cartHeader">
+				        <th colspan="4">주문 상품 : <%=ctQty %> 개</th>
+				    </tr>
+				    <tr class="shopCont">
+				        <td><img src="<%= bookImg %>.jpg"></td>
+				        <td align="left"><%= prdName %></td>
+				        <td><%= ctQty %>권</td>
+				        <td><%= amount %>원</td>
+				    </tr>
+				</table>
+				<%
+				    }
+				    rs2.close();
+				    pstmt2.close();
+				}
+				%>
             </article>
 
             <!-- 결제 수단-->
@@ -244,9 +240,13 @@
             <input type="checkbox" required>
             <span>상품, 가격, 할인 정보, 유의 사항 등을 확인하였으며 구매에 동의합니다.</span>
             <!-- 결제 버튼 -->
-				<a href="OrderOk.jsp"><button>결제하기</button></a>
+				<a><button>결제하기</button></a>
         </aside>
+        
 				</form>
+				
+				<script>
+</script>
         <%
         } finally {
             if (con != null) {
@@ -286,4 +286,3 @@
 
 </body>
 </html>
-

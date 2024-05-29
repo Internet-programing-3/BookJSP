@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html;charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="java.sql.*, java.text.*, java.util.*" %>
+<%@ page import="java.sql.*, java.text.*, java.util.*, java.net.URLDecoder" %>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -160,25 +160,35 @@ try {
     <!-- 주문 상품 목록 -->
     <section class="orderProducts">
         <%
-            String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ?";
-            PreparedStatement pstmt2 = con.prepareStatement(jsql2);
-            pstmt2.setString(1, userId);
-            ResultSet rs2 = pstmt2.executeQuery();
-            int total = 0;
-            while (rs2.next()) {
-                String prdNo = rs2.getString("bookId");
-                int ctQty = rs2.getInt("ctQty");
-                String jsql3 = "SELECT bookName, price, bookImg FROM Book WHERE bookId = ?";
-                PreparedStatement pstmt3 = con.prepareStatement(jsql3);
-                pstmt3.setString(1, prdNo);
-                ResultSet rs3 = pstmt3.executeQuery();
-                rs3.next();
+            String[] ctNosEncoded = request.getParameterValues("ctNos");
+            String[] ctNos = new String[ctNosEncoded.length];
+            for (int i = 0; i < ctNosEncoded.length; i++) {
+                ctNos[i] = URLDecoder.decode(ctNosEncoded[i], "UTF-8");
+            }
 
-                String prdName = rs3.getString("bookName");
-                int prdPrice = rs3.getInt("price");
-                String bookImg = rs3.getString("bookImg");
-                int amount = prdPrice * ctQty;
-                total += amount;
+            int total = 0;
+
+            for (String ctNo : ctNos) {
+                String jsql2 = "SELECT bookId, ctQty FROM cart WHERE userId = ? AND ctNo = ?";
+                PreparedStatement pstmt2 = con.prepareStatement(jsql2);
+                pstmt2.setString(1, userId);
+                pstmt2.setString(2, ctNo);
+                ResultSet rs2 = pstmt2.executeQuery();
+
+                while (rs2.next()) {
+                    String prdNo = rs2.getString("bookId");
+                    int ctQty = rs2.getInt("ctQty");
+                    String jsql3 = "SELECT bookName, price, bookImg FROM Book WHERE bookId = ?";
+                    PreparedStatement pstmt3 = con.prepareStatement(jsql3);
+                    pstmt3.setString(1, prdNo);
+                    ResultSet rs3 = pstmt3.executeQuery();
+                    rs3.next();
+
+                    String prdName = rs3.getString("bookName");
+                    int prdPrice = rs3.getInt("price");
+                    String bookImg = rs3.getString("bookImg");
+                    int amount = prdPrice * ctQty;
+                    total += amount;
         %>
         <article class="shopList">
             <table>
@@ -194,11 +204,20 @@ try {
             </table>
         </article>
         <%
-                rs3.close();
-                pstmt3.close();
+                    rs3.close();
+                    pstmt3.close();
+                }
+                rs2.close();
+                pstmt2.close();
+
+                // 장바구니 항목 삭제
+                String deleteCartSql = "DELETE FROM cart WHERE userId = ? AND ctNo = ?";
+                PreparedStatement pstmtDelete = con.prepareStatement(deleteCartSql);
+                pstmtDelete.setString(1, userId);
+                pstmtDelete.setString(2, ctNo);
+                pstmtDelete.executeUpdate();
+                pstmtDelete.close();
             }
-            rs2.close();
-            pstmt2.close();
         %>
     </section>
 
@@ -241,13 +260,6 @@ try {
     </div>
 </footer>
 <%
-    // 장바구니 항목 삭제
-    String deleteCartSql = "DELETE FROM cart WHERE userId = ?";
-    PreparedStatement pstmtDelete = con.prepareStatement(deleteCartSql);
-    pstmtDelete.setString(1, userId);
-    pstmtDelete.executeUpdate();
-    pstmtDelete.close();
-
 } catch (Exception e) {
     out.println("일반 오류: " + e.getMessage());
 } finally {
@@ -262,3 +274,4 @@ try {
 %>
 </body>
 </html>
+                
